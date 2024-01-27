@@ -1,0 +1,230 @@
+C51 COMPILER V8.02   MAIN                                                                  12/10/2023 01:03:35 PAGE 1   
+
+
+C51 COMPILER V8.02, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN Main.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE Main.c BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include<reg51.h>                       
+   2          #include<intrins.h>
+   3          #include <stdio.h>
+   4          #include <stdlib.h>
+   5          #include<string.h>
+   6          
+   7          #define uint unsigned int
+   8          #define uchar unsigned char
+   9          #define LC P1
+  10          sbit RS_1602=P0^5;
+  11          sbit RW_1602=P0^6;
+  12          sbit E_1602=P0^7;
+  13          sbit start_button = P0^0;
+  14          sbit stop_button = P0^1;
+  15          sbit reset_button = P0^2;
+  16          
+  17          
+  18          #define OUTPUT P2
+  19          
+  20          void Delay100us()               //@11.0592MHz
+  21          {
+  22   1              unsigned char i, j;
+  23   1      
+  24   1              _nop_();
+  25   1              _nop_();
+  26   1              i = 2;
+  27   1              j = 15;
+  28   1              do
+  29   1              {
+  30   2                      while (--j);
+  31   2              } while (--i);
+  32   1      }
+  33          
+  34          
+  35          void delay(uint x)
+  36          {
+  37   1      uint i,j;
+  38   1      for(i=x;i>0;i--)
+  39   1      for(j=110;j>0;j--);
+  40   1      }
+  41          
+  42          void Delay50ms()                //@11.0592MHz
+  43          {
+  44   1              unsigned char i, j, k;
+  45   1      
+  46   1              _nop_();
+  47   1              _nop_();
+  48   1              i = 3;
+  49   1              j = 26;
+  50   1              k = 223;
+  51   1              do
+  52   1              {
+  53   2                      do
+  54   2                      {
+  55   3                              while (--k);
+C51 COMPILER V8.02   MAIN                                                                  12/10/2023 01:03:35 PAGE 2   
+
+  56   3                      } while (--j);
+  57   2              } while (--i);
+  58   1      }
+  59          
+  60          
+  61          
+  62          // LCD
+  63          
+  64          void Write_Cmd(uchar cmd)
+  65          {
+  66   1      RS_1602=0;
+  67   1      RW_1602=0;
+  68   1      LC=cmd;
+  69   1      delay(5);
+  70   1      E_1602=1;
+  71   1      delay(5);
+  72   1      E_1602=0;
+  73   1      delay(5);
+  74   1      }
+  75          void Write_Dat(uchar Dat)
+  76          {
+  77   1      RS_1602=1;
+  78   1      RW_1602=0;       
+  79   1      LC=Dat;   
+  80   1      delay(5);
+  81   1      E_1602=1;
+  82   1      delay(5);
+  83   1      E_1602=0;
+  84   1      delay(5);
+  85   1      }
+  86          void LCD1602_init()
+  87          {
+  88   1      RW_1602=0;
+  89   1      Write_Cmd(0x38);
+  90   1      
+  91   1      Write_Cmd(0x0c);
+  92   1      Write_Cmd(0x06);
+  93   1      Write_Cmd(0x01);
+  94   1      }
+  95          void Clear_Display(char chat,int C){
+  96   1      Write_Cmd(0x80+chat);
+  97   1      while(C--){
+  98   2      Write_Dat(0x00);
+  99   2      delay(1);
+ 100   2      }
+ 101   1      }
+ 102          
+ 103          void Display(char* STR,char X,Y){
+ 104   1      Write_Cmd(0x80+(Y|X));
+ 105   1      while(*STR!='\0'){
+ 106   2      Write_Dat(*STR++);
+ 107   2      }
+ 108   1      }
+ 109           
+ 110          ///
+ 111          
+ 112          void convertIntToString(char* str, int num) {
+ 113   1          sprintf(str, "%d", num); // 使用sprintf函数进行格式化输入
+ 114   1      }
+ 115          
+ 116          
+ 117          
+C51 COMPILER V8.02   MAIN                                                                  12/10/2023 01:03:35 PAGE 3   
+
+ 118           
+ 119           
+ 120          
+ 121          int check_exit(){
+ 122   1       if(stop_button==0){
+ 123   2              delay(2);
+ 124   2              if(stop_button==0){
+ 125   3               return 0;                 }
+ 126   2        }
+ 127   1        else{
+ 128   2              return 1;
+ 129   2        }
+ 130   1      }
+ 131          int check_reset(){
+ 132   1       if(reset_button==0){
+ 133   2                      delay(2);
+ 134   2               if(reset_button==0){
+ 135   3               return 0;
+ 136   3               }
+ 137   2        }
+ 138   1        else{
+ 139   2              return 1;
+ 140   2        }
+ 141   1      }
+ 142          void status_finish(){
+ 143   1       Display("--[Finished..]--",0,64);//4 5 6
+ 144   1      }
+ 145          void status_run_display_init(){
+ 146   1      Display("--[Ready.....]--",0,64);//4 5 6
+ 147   1      }
+ 148          void status_clean(){
+ 149   1      Display("          ",3,64);//4 
+ 150   1      }
+ 151          
+ 152          int scan_bus(){
+ 153   1       
+ 154   1      int num = 0;
+ 155   1      int position=3;
+ 156   1      status_clean();
+ 157   1              while(1){
+ 158   2               for(;num<=255;num++){
+ 159   3                       if(check_exit()==0){num = 0;position=3;status_clean();status_run_display_init();return 0;}
+ 160   3                       if(check_reset()==0){num = 0;position=3;status_clean();break;}
+ 161   3                       if(num%25==0){  
+ 162   4                       Display("/",position++,64);
+ 163   4                       }                                       
+ 164   3                       OUTPUT = num;
+ 165   3                       Delay100us();
+ 166   3                      }
+ 167   2                 if(num>=255){
+ 168   3                              status_finish();
+ 169   3                              OUTPUT=0xFF;
+ 170   3                              if(check_exit()==0){num = 0;position=3;status_clean();status_run_display_init();return 0;}
+ 171   3                              if(check_reset()==0){num = 0;position=3;status_clean();break;}
+ 172   3                 }
+ 173   2      
+ 174   2              }
+ 175   1      
+ 176   1      }
+ 177          
+ 178          
+ 179          
+C51 COMPILER V8.02   MAIN                                                                  12/10/2023 01:03:35 PAGE 4   
+
+ 180          
+ 181          void main(){
+ 182   1       
+ 183   1      LCD1602_init();
+ 184   1      Display("--Cracking Mod--",0,0);
+ 185   1      status_run_display_init();
+ 186   1      
+ 187   1      
+ 188   1      
+ 189   1      while(1){
+ 190   2        if(start_button==0){
+ 191   3                      delay(2);
+ 192   3              if(start_button==0){
+ 193   4                      if(scan_bus()==0){
+ 194   5                              status_run_display_init();
+ 195   5                              }
+ 196   4                      }
+ 197   3        }  
+ 198   2      }
+ 199   1      
+ 200   1      
+ 201   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    515    ----
+   CONSTANT SIZE    =     67    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----      10
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
